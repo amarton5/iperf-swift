@@ -22,6 +22,9 @@ public struct IperfIntervalResult: Identifiable {
     public var duration: TimeInterval = 0.0
     public var state: IperfState = .UNKNOWN
     public var debugDescription: String = ""
+
+    public var rtt: Int32 = 0
+    public var avgrtt: Double = 0
     
     public var startTime: TimeInterval = 0.0
     public var endTime: TimeInterval = 0.0
@@ -49,6 +52,7 @@ public struct IperfIntervalResult: Identifiable {
     
     mutating public func evaulate() {
         var sumJitter: Double = 0.0
+        var avgrtt: Double = 0.0
         for s in streams {
             totalBytes += s.bytesTransferred
             if self.prot == .udp {
@@ -57,7 +61,15 @@ public struct IperfIntervalResult: Identifiable {
                 totalOutoforderPackets += s.intervalOutoforderPackets
                 sumJitter += s.jitter
             }
+            if self.prot == .tcp {
+                rtt += (s.rtt / 1000)
+            }
         }
+
+        if self.prot == .tcp {
+            rtt = (rtt / 1000)
+        }
+
         if let first = streams.first {
             startTime = first.startTime
             endTime = first.endTime
@@ -65,6 +77,9 @@ public struct IperfIntervalResult: Identifiable {
             
             if self.prot == .udp {
                 averageJitter = sumJitter / Double(streams.count)
+            }
+            if self.prot == .tcp {
+                avgrtt = Double(rtt) / Double(streams.count)
             }
             throughput = IperfThroughput(bytes: totalBytes, seconds: first.intervalDuration)
         }
